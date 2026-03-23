@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EquityIQ — AI Stock Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:        #05060a;
+  --bg2:       #080c12;
+  --surface:   rgba(255,255,255,0.025);
+  --border:    rgba(255,255,255,0.07);
+  --text:      #dde4ee;
+  --dim:       #5a6a80;
+  --muted:     #2a3444;
+  --gold:      #e8c97a;
+  --gold2:     #c9a84c;
+  --teal:      #2dd4bf;
+  --red:       #f87171;
+  --blue:      #60a5fa;
+  --purple:    #c084fc;
+  --green:     #4ade80;
+  --orange:    #fb923c;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+
+body {
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse 70% 40% at 50% -5%, rgba(232,201,122,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 30% at 85% 80%, rgba(45,212,191,0.04) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.012'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(232,201,122,0.2);border-radius:3px}
+
+/* ── NAV ── */
+nav {
+  position: sticky; top:0; z-index:200;
+  display: flex; align-items:center; justify-content:space-between;
+  padding: 0 48px; height: 62px;
+  background: rgba(5,6,10,0.88);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.logo {
+  font-family: 'DM Serif Display', serif;
+  font-size: 20px; color: var(--gold);
+  display: flex; align-items:center; gap:10px;
+  letter-spacing: 0.02em;
+}
+.logo-mark {
+  width: 30px; height: 30px;
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  border-radius: 7px;
+  display:flex; align-items:center; justify-content:center;
+  font-size: 14px; font-family:'DM Mono',monospace; font-weight:500;
+  color:#000; letter-spacing:-0.05em;
+}
+.nav-center {
+  display:flex; gap:6px;
+}
+.nav-pill {
+  font-family:'DM Mono',monospace; font-size:10px;
+  color:var(--dim); letter-spacing:0.1em;
+  padding:4px 12px; border-radius:20px;
+  border:1px solid var(--border);
+  cursor:pointer; transition:all 0.2s;
+  background: transparent;
+}
+.nav-pill:hover, .nav-pill.active {
+  color:var(--gold); border-color:rgba(232,201,122,0.3);
+  background:rgba(232,201,122,0.06);
+}
+.api-wrap {
+  display:flex; align-items:center; gap:8px;
+}
+.api-wrap label {
+  font-family:'DM Mono',monospace; font-size:9px;
+  color:var(--gold2); letter-spacing:0.12em;
+}
+.api-wrap input {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(232,201,122,0.2);
+  border-radius:6px; padding:7px 12px;
+  color:#ccc; font-family:'DM Mono',monospace; font-size:11px;
+  outline:none; width:210px; transition:border-color 0.2s;
+}
+.api-wrap input:focus{border-color:rgba(232,201,122,0.5)}
+
+/* ── HERO ── */
+.hero {
+  max-width:900px; margin:0 auto;
+  padding:80px 32px 60px;
+  text-align:center;
+  animation: riseIn 0.8s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes riseIn{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+
+.hero-eyebrow {
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(232,201,122,0.08);
+  border:1px solid rgba(232,201,122,0.2);
+  border-radius:20px; padding:5px 16px; margin-bottom:28px;
+  font-family:'DM Mono',monospace; font-size:10px;
+  color:var(--gold); letter-spacing:0.15em; font-weight:500;
+}
+.hero-eyebrow::before {
+  content:''; width:6px; height:6px; border-radius:50%;
+  background:var(--gold); box-shadow:0 0 8px var(--gold);
+  animation: glow 2s ease-in-out infinite;
+}
+@keyframes glow{0%,100%{opacity:1}50%{opacity:0.4}}
+
+.hero h1 {
+  font-family:'DM Serif Display',serif;
+  font-size:clamp(38px, 6vw, 70px);
+  line-height:1.05; letter-spacing:-0.02em;
+  margin-bottom:20px; color:#f0e8d5;
+}
+.hero h1 em {
+  font-style:italic; color:var(--gold);
+}
+.hero p {
+  color:var(--dim); font-size:16px; line-height:1.75;
+  max-width:540px; margin:0 auto 40px; font-weight:300;
+}
+.hero-tags {
+  display:flex; justify-content:center; gap:10px; flex-wrap:wrap;
+}
+.hero-tag {
+  font-family:'DM Mono',monospace; font-size:10px;
+  padding:5px 14px; border-radius:20px;
+  border:1px solid var(--border); color:var(--dim);
+  letter-spacing:0.06em;
+}
+
+/* ── DIVIDER ── */
+.divider {
+  max-width:1160px; margin:0 auto 40px;
+  padding:0 32px;
+  display:flex; align-items:center; gap:16px;
+}
+.divider-line{flex:1;height:1px;background:var(--border)}
+.divider-txt {
+  font-family:'DM Mono',monospace; font-size:10px;
+  color:var(--muted); letter-spacing:0.14em; white-space:nowrap;
+}
+
+/* ── TOOLS GRID ── */
+.grid {
+  max-width:1160px; margin:0 auto;
+  padding:0 32px 80px;
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(500px,1fr));
+  gap:18px;
+}
+
+/* ── CARD ── */
+.card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:18px; padding:28px;
+  display:flex; flex-direction:column; gap:20px;
+  position:relative; overflow:hidden;
+  transition:border-color 0.3s, box-shadow 0.3s, transform 0.25s;
+  animation: riseIn 0.7s cubic-bezier(.16,1,.3,1) both;
+}
+.card:hover {
+  transform:translateY(-2px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4),
+              0 0 0 1px color-mix(in srgb,var(--ac) 20%,transparent);
+  border-color:color-mix(in srgb,var(--ac) 30%,transparent);
+}
+.card::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(ellipse 60% 50% at 80% -10%,
+    color-mix(in srgb,var(--ac) 7%,transparent), transparent 65%);
+}
+.card-stripe {
+  position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg,transparent,var(--ac),transparent);
+  opacity:0.7;
+}
+
+/* CARD HEADER */
+.card-head {
+  display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+}
+.card-icon-wrap {
+  width:48px; height:48px; border-radius:12px; flex-shrink:0;
+  background:color-mix(in srgb,var(--ac) 12%,transparent);
+  border:1px solid color-mix(in srgb,var(--ac) 22%,transparent);
+  display:flex; align-items:center; justify-content:center; font-size:22px;
+}
+.card-info { flex:1 }
+.card-tag {
+  font-family:'DM Mono',monospace; font-size:9px; font-weight:500;
+  letter-spacing:0.14em; color:var(--ac);
+  background:color-mix(in srgb,var(--ac) 10%,transparent);
+  border:1px solid color-mix(in srgb,var(--ac) 20%,transparent);
+  padding:2px 9px; border-radius:4px;
+  display:inline-block; margin-bottom:6px;
+}
+.card-title {
+  font-family:'DM Serif Display',serif;
+  font-size:17px; color:#eef2f8; line-height:1.3;
+}
+.card-num {
+  font-family:'DM Mono',monospace; font-size:30px; font-weight:300;
+  color:color-mix(in srgb,var(--ac) 15%,transparent);
+  flex-shrink:0; margin-top:2px; line-height:1;
+}
+
+/* FIELDS */
+.fields { display:flex; flex-direction:column; gap:10px }
+.row2   { display:grid; grid-template-columns:1fr 1fr; gap:10px }
+.field  { display:flex; flex-direction:column; gap:4px }
+.field label {
+  font-family:'DM Mono',monospace; font-size:9px;
+  color:var(--dim); letter-spacing:0.12em; font-weight:500;
+}
+.field input, .field textarea, .field select {
+  width:100%; background:rgba(0,0,0,0.45);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:8px; padding:10px 13px;
+  color:#c8d0dc; font-size:13px;
+  font-family:'DM Mono',monospace;
+  outline:none; transition:border-color 0.2s; resize:vertical;
+}
+.field input:focus,.field textarea:focus,.field select:focus {
+  border-color:color-mix(in srgb,var(--ac) 60%,transparent);
+  background:rgba(0,0,0,0.55);
+}
+.field input::placeholder,.field textarea::placeholder{color:#1e2a38}
+.field select option{background:#0a0f1a}
+
+/* BUTTON */
+.btn {
+  align-self:flex-start;
+  background:var(--ac); color:#000;
+  border:none; border-radius:9px;
+  padding:11px 26px;
+  font-family:'DM Mono',monospace;
+  font-size:11px; font-weight:500; letter-spacing:0.1em;
+  cursor:pointer; transition:all 0.2s;
+  display:flex; align-items:center; gap:8px;
+  position:relative; overflow:hidden;
+}
+.btn::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.15),transparent);
+  pointer-events:none;
+}
+.btn:hover{opacity:0.85;transform:translateY(-1px);box-shadow:0 6px 20px color-mix(in srgb,var(--ac) 30%,transparent)}
+.btn:disabled{background:rgba(255,255,255,0.07);color:#334155;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* RESULT */
+.result {
+  display:none;
+  background:rgba(0,0,0,0.5);
+  border:1px solid color-mix(in srgb,var(--ac) 14%,transparent);
+  border-radius:10px; padding:18px;
+  max-height:420px; overflow-y:auto;
+  font-size:13px; color:#94a3b8; line-height:1.8;
+  font-family:'DM Sans',sans-serif;
+  white-space:pre-wrap;
+}
+.result.show{display:block}
+.loading {
+  display:flex; align-items:center; gap:10px;
+  color:var(--dim); font-family:'DM Mono',monospace; font-size:11px;
+}
+.spin {
+  width:14px; height:14px; border-radius:50%;
+  border:2px solid rgba(255,255,255,0.08);
+  animation:spin 0.75s linear infinite; flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* FOOTER */
+footer {
+  border-top:1px solid var(--border);
+  padding:28px 32px; text-align:center;
+  font-family:'DM Mono',monospace; font-size:10px;
+  color:var(--muted); letter-spacing:0.08em;
+}
+
+@media(max-width:700px){
+  .grid{grid-template-columns:1fr;padding:0 16px 60px}
+  nav{padding:0 16px}
+  .nav-center{display:none}
+  .api-wrap input{width:150px}
+  .hero{padding:52px 16px 40px}
+  .row2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">
+    <div class="logo-mark">EQ</div>
+    EquityIQ
+  </div>
+  <div class="nav-center">
+    <div class="nav-pill active">Analysis</div>
+    <div class="nav-pill">Screener</div>
+    <div class="nav-pill">Portfolio</div>
+    <div class="nav-pill">Timing</div>
+  </div>
+  <div class="api-wrap">
+    <label>API KEY</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-api03-..."/>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">7 AI-POWERED WALL STREET TOOLS</div>
+  <h1>Institutional-Grade<br/><em>Stock Intelligence</em></h1>
+  <p>Full stock analysis, screeners, earnings decoders, risk assessments, head-to-head comparisons, portfolio builders and entry timing — all powered by AI.</p>
+  <div class="hero-tags">
+    <div class="hero-tag">BUY · HOLD · SELL</div>
+    <div class="hero-tag">NSE · BSE · NYSE</div>
+    <div class="hero-tag">RISK ANALYSIS</div>
+    <div class="hero-tag">PORTFOLIO BUILDER</div>
+    <div class="hero-tag">ENTRY TIMING</div>
+  </div>
+</div>
+
+<!-- DIVIDER -->
+<div class="divider">
+  <div class="divider-line"></div>
+  <div class="divider-txt">7 ANALYSIS TOOLS</div>
+  <div class="divider-line"></div>
+</div>
+
+<!-- GRID -->
+<div class="grid" id="grid"></div>
+
+<footer>
+  ⚠️ FOR EDUCATIONAL PURPOSES ONLY · NOT FINANCIAL ADVICE · EQUITYIQ © 2025
+</footer>
+
+<script>
+const TOOLS = [
+  {
+    icon:"📊", tag:"FULL ANALYSIS", ac:"#e8c97a", num:"01",
+    title:"Full Stock Analysis",
+    desc:"Revenue, margins, debt, moat & buy/hold/sell verdict",
+    fields:[
+      {key:"ticker", label:"Stock Ticker", placeholder:"e.g. AAPL, RELIANCE, TSLA, ITC"}
+    ],
+    prompt: v=>`Act as a senior Wall Street analyst. Analyze ${v.ticker} covering:
+1. Revenue Growth — trend over last 3–5 years
+2. Profit Margins — gross, operating, net
+3. Debt Levels — D/E ratio, interest coverage, balance sheet health
+4. Competitive Position — moat, market share, key risks
+5. Valuation — PE, PB, EV/EBITDA vs peers and historical averages
+
+End with a clear BUY / HOLD / SELL recommendation with your reasoning. Be specific with numbers. Use ₹ for Indian stocks and $ for US stocks.`
+  },
+  {
+    icon:"🔍", tag:"SCREENER", ac:"#60a5fa", num:"02",
+    title:"Build a Stock Screener",
+    desc:"Exact metrics & thresholds to filter high-quality stocks",
+    fields:[
+      {key:"style",  label:"Investment Style",  placeholder:"e.g. growth, dividend, value, momentum"},
+      {key:"sector", label:"Sector / Market",   placeholder:"e.g. tech, pharma, Nifty 50, S&P 500"}
+    ],
+    prompt: v=>`Create a detailed stock screening criteria list for finding ${v.style} stocks in ${v.sector}.
+
+Include exact:
+1. Financial Metrics with specific numerical thresholds (Revenue growth %, EPS growth %, etc.)
+2. Valuation Ratios with ranges (PE < X, PB < X, etc.)
+3. Quality Filters (ROE >, Debt/Equity <, etc.)
+4. Momentum / Technical Filters if relevant
+5. Red Flags to exclude (what to avoid)
+
+Format as a clear checklist. Explain WHY each threshold matters. Give 3 example stocks that would pass this screen.`
+  },
+  {
+    icon:"📄", tag:"EARNINGS", ac:"#fb923c", num:"03",
+    title:"Understand Any Earnings Report",
+    desc:"Plain-language breakdown of beats, misses & outlook",
+    fields:[
+      {key:"company", label:"Company Name",              placeholder:"e.g. Apple, Infosys, Reliance"},
+      {key:"report",  label:"Paste Earnings Data / Key Numbers", placeholder:"Revenue: $X, EPS: $X vs estimate $X, Guidance: ...", multiline:true, rows:4}
+    ],
+    prompt: v=>`Break down this earnings report for ${v.company} in plain language for a retail investor:
+
+${v.report}
+
+Structure your analysis as:
+1. HEADLINE — One sentence summary (good/bad/mixed quarter?)
+2. BEATS — What exceeded expectations? By how much?
+3. MISSES — What disappointed? Why does it matter?
+4. MANAGEMENT SIGNALS — What did they say about the future? Any guidance changes?
+5. INVESTMENT CASE — Does this quarter strengthen or weaken the bull/bear thesis?
+6. VERDICT — Does this change your view on the stock? Buy more / hold / trim?
+
+Use simple language. Be direct and honest.`
+  },
+  {
+    icon:"⚠️", tag:"RISK ANALYSIS", ac:"#f87171", num:"04",
+    title:"Assess Stock's Real Risk",
+    desc:"Downside scenarios, threats & worst-case analysis",
+    fields:[
+      {key:"ticker", label:"Stock Ticker", placeholder:"e.g. AAPL, RELIANCE, TSLA, ITC"}
+    ],
+    prompt: v=>`Analyze the downside risk of investing in ${v.ticker} comprehensively:
+
+1. INDUSTRY THREATS — Disruption, regulation, commoditization risks
+2. COMPETITIVE RISKS — Who can take market share? How vulnerable is the moat?
+3. BALANCE SHEET VULNERABILITIES — Debt, cash burn, refinancing risks
+4. MACRO EXPOSURE — Interest rate sensitivity, currency risk, recession impact
+5. MANAGEMENT / GOVERNANCE RISKS — Key person risk, track record, related-party issues
+6. VALUATION RISK — What multiple compression looks like in a bad scenario
+7. WORST-CASE SCENARIO — Realistic bear case with a price target
+8. PROBABILITY ASSESSMENT — How likely is the downside in your view?
+
+Be direct. Don't sugarcoat. Investors need the full picture.`
+  },
+  {
+    icon:"⚔️", tag:"COMPARE", ac:"#c084fc", num:"05",
+    title:"Compare Two Stocks Head to Head",
+    desc:"Side-by-side analysis with a clear winner",
+    fields:[
+      {key:"stockA",    label:"Stock A",           placeholder:"e.g. AAPL"},
+      {key:"stockB",    label:"Stock B",           placeholder:"e.g. MSFT"},
+      {key:"style",     label:"Investor Type",     placeholder:"e.g. growth, income, value"},
+      {key:"timeframe", label:"Investment Horizon",placeholder:"e.g. 1 year, 5 years, long-term"}
+    ],
+    prompt: v=>`Compare ${v.stockA} vs ${v.stockB} head-to-head for a ${v.style} investor with a ${v.timeframe} horizon.
+
+Use this structure:
+1. SNAPSHOT — Quick stats on both (PE, growth rate, dividend yield, market cap)
+2. VALUATION — Which is cheaper on key metrics?
+3. GROWTH TRAJECTORY — Who has better revenue/earnings growth ahead?
+4. FINANCIAL HEALTH — Balance sheet, cash flow, debt comparison
+5. COMPETITIVE MOAT — Whose business advantage is stronger and more durable?
+6. RISKS — What could go wrong for each?
+7. FOR A ${v.style.toUpperCase()} INVESTOR — Which fits the profile better and why?
+8. VERDICT — Clear winner with conviction. No fence-sitting.`
+  },
+  {
+    icon:"💼", tag:"PORTFOLIO", ac:"#4ade80", num:"06",
+    title:"Build a Diversified Portfolio",
+    desc:"Allocation % + investment thesis for each position",
+    fields:[
+      {key:"amount",   label:"Investment Amount",   placeholder:"e.g. ₹50,000 or $10,000"},
+      {key:"strategy", label:"Strategy",            placeholder:"e.g. conservative, growth, aggressive"},
+      {key:"timeframe",label:"Time Horizon",        placeholder:"e.g. 3 years, 10 years"},
+      {key:"count",    label:"Number of Stocks",    placeholder:"e.g. 8, 10, 15"}
+    ],
+    prompt: v=>`Build a complete diversified stock portfolio for the following investor:
+
+Amount: ${v.amount}
+Strategy: ${v.strategy}
+Time Horizon: ${v.timeframe}
+Number of Stocks: ${v.count}
+
+For each stock provide:
+- Stock Name & Ticker
+- Allocation % and exact amount
+- Sector
+- 2–3 sentence investment thesis
+- Key risk to watch
+
+Then provide:
+1. Sector allocation breakdown
+2. Geographic split (if mixed)
+3. Overall portfolio characteristics (expected return, risk level, income yield)
+4. Rebalancing suggestion (when/how often)
+5. What would make you EXIT each position
+
+Make it practical and actionable.`
+  },
+  {
+    icon:"⏱️", tag:"ENTRY TIMING", ac:"#2dd4bf", num:"07",
+    title:"Time Your Entry Like a Pro",
+    desc:"Support levels, price targets & buy now vs. wait",
+    fields:[
+      {key:"ticker",  label:"Stock Ticker",    placeholder:"e.g. AAPL, RELIANCE, TSLA, ITC"},
+      {key:"current", label:"Current Price",   placeholder:"e.g. ₹305 or $185"},
+      {key:"horizon", label:"Holding Period",  placeholder:"e.g. 3 months, 1 year, long-term"}
+    ],
+    prompt: v=>`I want to buy ${v.ticker} at the best possible price. Current price: ${v.current}. Holding period: ${v.horizon}.
+
+Provide a complete entry timing analysis:
+1. CURRENT VALUATION — Is it cheap, fair, or expensive right now?
+2. TECHNICAL PICTURE — Key support and resistance levels with specific prices
+3. ENTRY STRATEGY — Choose one:
+   a) Buy Now — if risk/reward is compelling today
+   b) Wait for Pullback — specify exact target price and what to look for
+   c) Scale In — specify tranches (e.g. 50% now, 50% at ₹X)
+4. STOP LOSS — Exact price level where the thesis is broken
+5. PRICE TARGETS — 3-month, 6-month, and 12-month targets
+6. CATALYSTS TO WATCH — What events could move the stock significantly?
+7. FINAL VERDICT — Specific entry price recommendation with confidence level
+
+Be precise with price levels. Use the same currency as the current price.`
+  },
+];
+
+// ── Build cards ──────────────────────────────────────────────────────────────
+function buildCard(tool, idx) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.cssText = `--ac:${tool.ac}; animation-delay:${idx*0.08}s`;
+
+  const fieldsHTML = tool.fields.map(f => {
+    if(f.multiline){
+      return `<div class="field"><label>${f.label.toUpperCase()}</label>
+        <textarea data-key="${f.key}" rows="${f.rows||3}" placeholder="${f.placeholder}"></textarea></div>`;
+    }
+    return `<div class="field"><label>${f.label.toUpperCase()}</label>
+      <input type="text" data-key="${f.key}" placeholder="${f.placeholder}"/></div>`;
+  });
+
+  // Pair non-multiline fields into rows of 2
+  let fieldsGrouped = '';
+  let singles = tool.fields.filter(f => !f.multiline);
+  let multis  = tool.fields.filter(f =>  f.multiline);
+
+  if(singles.length === 4){
+    fieldsGrouped += `<div class="row2">${fieldsHTML[0]}${fieldsHTML[1]}</div>`;
+    fieldsGrouped += `<div class="row2">${fieldsHTML[2]}${fieldsHTML[3]}</div>`;
+  } else if(singles.length === 3 && !multis.length){
+    fieldsGrouped += `<div class="row2">${fieldsHTML[0]}${fieldsHTML[1]}</div>${fieldsHTML[2]}`;
+  } else if(singles.length === 2 && multis.length === 1){
+    fieldsGrouped += `<div class="row2">${fieldsHTML[0]}${fieldsHTML[1]}</div>`;
+    fieldsGrouped += fieldsHTML[2];
+  } else {
+    fieldsGrouped = fieldsHTML.join('');
+  }
+
+  card.innerHTML = `
+    <div class="card-stripe"></div>
+    <div class="card-head">
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        <div class="card-icon-wrap">${tool.icon}</div>
+        <div class="card-info">
+          <div class="card-tag">${tool.tag}</div>
+          <div class="card-title">${tool.title}</div>
+        </div>
+      </div>
+      <div class="card-num">${tool.num}</div>
+    </div>
+    <div class="fields">${fieldsGrouped}</div>
+    <button class="btn">▶&nbsp;&nbsp;RUN ANALYSIS</button>
+    <div class="result"></div>
+  `;
+
+  card.querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('keydown', e => { if(e.key==='Enter') card.querySelector('.btn').click(); })
+  );
+
+  card.querySelector('.btn').addEventListener('click', async () => {
+    const key = document.getElementById('apiKey').value.trim();
+    if(!key){ alert('⚠️ Enter your Anthropic API key in the top navigation bar.'); return; }
+
+    const vals = {};
+    card.querySelectorAll('[data-key]').forEach(el => vals[el.dataset.key] = el.value.trim());
+    const required = tool.fields.filter(f => !f.placeholder?.toLowerCase().includes('optional'));
+    if(!required.every(f => vals[f.key])){ alert('⚠️ Please fill in all fields.'); return; }
+
+    const btn = card.querySelector('.btn');
+    const res = card.querySelector('.result');
+    btn.disabled = true;
+    btn.innerHTML = `<div class="spin" style="border-top-color:${tool.ac}"></div>&nbsp;ANALYZING...`;
+    res.className = 'result show';
+    res.innerHTML = `<div class="loading"><div class="spin" style="border-top-color:${tool.ac}"></div>&nbsp;&nbsp;Running AI analysis — this takes a few seconds...</div>`;
+    res.scrollIntoView({behavior:'smooth', block:'nearest'});
+
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key': key,
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true'
+        },
+        body: JSON.stringify({
+          model:'claude-sonnet-4-20250514',
+          max_tokens:1024,
+          messages:[{ role:'user', content: tool.prompt(vals) }]
+        })
+      });
+      const data = await r.json();
+      if(data.error) throw new Error(data.error.message);
+      res.textContent = data.content.map(b=>b.text||'').join('');
+    } catch(err){
+      res.innerHTML = `<span style="color:var(--red)">⚠️ Error: ${err.message}</span>`;
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '▶&nbsp;&nbsp;RUN ANALYSIS';
+  });
+
+  return card;
+}
+
+const grid = document.getElementById('grid');
+TOOLS.forEach((t,i) => grid.appendChild(buildCard(t,i)));
+</script>
+</body>
+</html>
